@@ -1,0 +1,42 @@
+/******************************************************************************/
+/* Max edge in a tree *******/
+
+
+/* Info *******************************/
+
+algorithm {maxEdgeInTree}
+vertex { integer name; }
+cluster { integer max_path, max_non_path; }
+
+
+/* Algorithm description **************/
+
+create {
+  path {
+    c.max_path = MAX(c.max_path, c.max_non_path);
+    c.max_non_path = ImINF;
+  }
+  point {
+    c.max_non_path = MAX(c.max_path, c.max_non_path);
+    c.max_path = ImINF;
+  }
+}
+
+join {
+  path_child {
+    child.on = child.max_path;
+    child.out = child.max_non_path;
+  }
+  point_child {
+    child.on = ImINF;
+    child.out = MAX(child.max_path, child.max_non_path);
+  }
+  path_parent {
+    c.max_path = MAX(a.on, b.on);
+    c.max_non_path = MAX(a.out, b.out);
+  }
+  point_parent {
+    c.max_path = ImINF;
+    c.max_non_path = MAX(a.on, b.on, a.out, b.out);
+  }
+}

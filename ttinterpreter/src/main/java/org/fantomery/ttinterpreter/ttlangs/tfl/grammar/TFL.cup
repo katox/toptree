@@ -1,0 +1,528 @@
+/* This file defines grammar of Top Tree Friendly language TFL a describes
+   compilation from TFL to Java. */
+
+package org.fantomery.ttinterpreter.ttlangs.tfl;
+
+import java.util.ArrayList;
+import org.fantomery.ttinterpreter.ttlangs.tfl.TFLExpression;
+import org.fantomery.ttinterpreter.ttlangs.tfl.TFLCompiler;
+import org.fantomery.ttinterpreter.ttlangs.tfl.TFLCompiler.*;
+
+/* Parser code to change the way the parser reports errors (include
+   line and column number of the error). */
+parser code {:
+    
+    /* Change the method report_error so it will display the line and
+       column of where the error occurred in the input as well as the
+       reason for the error which is passed into the method in the
+       String 'message'. */
+    public void report_error(String message, Object info) {
+   
+        /* Create a StringBuffer called 'm' with the string 'Error' in it. */
+        StringBuffer m = new StringBuffer("Error");
+   
+        /* Check if the information passed to the method is the same
+           type as the type java_cup.runtime.Symbol. */
+        if (info instanceof java_cup.runtime.Symbol) {
+            /* Declare a java_cup.runtime.Symbol object 's' with the
+               information in the object info that is being typecasted
+               as a java_cup.runtime.Symbol object. */
+            java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
+   
+            /* Check if the line number in the input is greater or
+               equal to zero. */
+            if (s.left >= 0) {                
+                /* Add to the end of the StringBuffer error message
+                   the line number of the error in the input. */
+                m.append(" in line "+(s.left+1));   
+                /* Check if the column number in the input is greater
+                   or equal to zero. */
+                if (s.right >= 0)                    
+                    /* Add to the end of the StringBuffer error message
+                       the column number of the error in the input. */
+                    m.append(", column "+(s.right+1));
+            }
+        }
+   
+        /* Add to the end of the StringBuffer error message created in
+           this method the message that was passed into this method. */
+        m.append(" : "+message);
+   
+        /* Print the contents of the StringBuffer 'm', which contains
+           an error message, out on a line. */
+        System.err.println(m);
+    }
+   
+    /* Change the method report_fatal_error so when it reports a fatal
+       error it will display the line and column number of where the
+       fatal error occurred in the input as well as the reason for the
+       fatal error which is passed into the method in the object
+       'message' and then exit.*/
+    public void report_fatal_error(String message, Object info) {
+        report_error(message, info);
+        System.exit(1);
+    }
+:};
+
+action code {:
+  TFLCompiler info = new TFLCompiler();
+:};
+
+
+terminal COMMA, SEMI, DOT, LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET, RBRACKET;
+terminal ALGORITHM, VERTEX, CLUSTER, VAR, CREATE, DESTROY;
+terminal PATH, POINT;
+terminal ARRAY;
+/* a value for INTEGER, REAL, STRING or BOOLEAN */
+terminal DataType DATA_TYPE;
+/* a name of algorithm or variable */
+terminal String VARIABLE;
+
+/* terminals of common part of any codes */
+terminal A, B, C, CHILD; 
+terminal LEFT, RIGHT, COMMON, BORDER; 
+terminal ASSIGN, PLUS_ASSIGN, MINUS_ASSIGN, TIMES_ASSIGN, DIVIDE_ASSIGN, AMPERSAND_ASSIGN;
+terminal IF, ELSEIF, ELSE;
+terminal AND, OR;
+terminal TRUE, FALSE;
+terminal EQUAL, NOT_EQUAL, LESS, GREATER, LESS_EQUAL, GREATER_EQUAL;
+terminal PLUS, MINUS, TIMES, DIVIDE, UMINUS, AMPERSAND;
+terminal MAX, MIN, EXISTS;
+terminal String I_NUMBER, R_NUMBER, IMINF, IPINF, RMINF, RPINF;
+terminal String STRING_LITERAL;
+
+
+
+terminal JOIN, SPLIT, PATH_CHILD, POINT_CHILD, PATH_PARENT, POINT_PARENT,
+         PATH_AND_PATH, PATH_AND_POINT, POINT_AND_PATH, POINT_AND_POINT,
+         LPOINT_OVER_RPOINT, RPOINT_OVER_LPOINT, LPOINT_AND_RPOINT;
+
+terminal SELECT_QUESTION, SELECT;
+
+
+
+
+
+
+
+/* root of parsing tree */
+non terminal TFLCompiler program;
+
+/* non terminals of any code that are Expressions - middle levels of parsing tree*/
+non terminal TFLExpression variable, arithmetic, extrem_function, condition,
+                           expression, exists_function, extr_funct_arguments;
+
+/* non terminals of algorithm, vertex, cluster and var */
+non terminal algorithm, vertex, cluster, var, vertex_declar, cluster_declar, var_declar;
+non terminal create, destroy, body_cd, path, point;
+non terminal ArrayList<String> declar_variables;
+non terminal DataType common_type;
+
+/* non terminals of variable and operators */
+non terminal VertexShort        vertex_short;
+non terminal ClusterShort       cluster_short;
+non terminal AssignmentOperetor assignment_operator;
+non terminal BooleanOperetor    boolean_operator;
+non terminal ComparisonOperetor comparison_operator;
+non terminal ArithmeticOperetor arithmetic_operator;
+
+
+/* non terminal that are on higher levels of tree near root */
+non terminal join, split, select;
+non terminal ArrayList<String> body_select;
+non terminal ArrayList<String> any_code, assignment, if, elseif, else;
+
+
+non terminal BuildingBlock one_cluster_type;
+non terminal ArrayList<BuildingBlock> more_cluster_types;
+
+non terminal body_join, body_split, child_types, parent_types, path_child,
+             point_child, path_parent, point_parent, cluster_types;   
+
+
+
+
+/* Precedences */
+
+precedence left ASSIGN, PLUS_ASSIGN, MINUS_ASSIGN, TIMES_ASSIGN, DIVIDE_ASSIGN, AMPERSAND_ASSIGN;
+precedence left AND, OR;
+precedence left EQUAL, NOT_EQUAL, LESS, GREATER, LESS_EQUAL, GREATER_EQUAL;
+precedence left PLUS, MINUS, AMPERSAND;
+precedence left TIMES, DIVIDE;
+precedence left UMINUS;
+
+
+start with program;
+
+
+/* Start terminal */
+program ::= algorithm vertex cluster var create destroy join split select
+            {: RESULT = info; :}
+          ;
+
+
+/* Rules for algorithm */
+algorithm ::= ALGORITHM LBRACE VARIABLE:name RBRACE
+              {: info.setNames(name); :}
+            ;
+
+
+/* Rules for vertex */
+vertex           ::= VERTEX LBRACE vertex_declar RBRACE
+                     {: /* nothing to do */ :}
+                   ;
+vertex_declar    ::= DATA_TYPE:b_t declar_variables:arr_vs SEMI
+                     {: info.pushVertexFields(b_t, arr_vs); :}
+                   | vertex_declar DATA_TYPE:b_t declar_variables:arr_vs SEMI
+                     {: info.pushVertexFields(b_t, arr_vs); :}
+                   ;
+declar_variables ::= VARIABLE:v
+                     {: 
+                       ArrayList<String> arr_vs = new ArrayList<String>();
+                       arr_vs.add(v);
+                       RESULT = arr_vs;
+                     :}
+                   | declar_variables:arr_vs COMMA VARIABLE:v
+                     {: 
+                       arr_vs.add(v);
+                       RESULT = arr_vs;
+                     :}
+                   ;
+
+
+/* Rules for cluster */
+cluster        ::= CLUSTER LBRACE cluster_declar RBRACE
+                   {: /* nothing to do */ :}
+                 ;
+cluster_declar ::= common_type:c_t declar_variables:arr_vs SEMI
+                   {: info.pushClusterFields(c_t, arr_vs); :}
+                 | common_type:c_t declar_variables:arr_vs SEMI cluster_declar
+                   {: info.pushClusterFields(c_t, arr_vs); :}
+                 ;
+common_type    ::= DATA_TYPE:b_t
+                   {: RESULT = TFLCompiler.getCommonType(b_t, false); :}
+                 | ARRAY LPAREN DATA_TYPE:b_t RPAREN
+                   {: RESULT = TFLCompiler.getCommonType(b_t, true); :}
+                 ;
+                
+
+/* Rules for var */
+var        ::= /* empty */
+             | VAR LBRACE var_declar RBRACE
+               {: /* nothing to do */ :}
+             ;
+var_declar ::= DATA_TYPE:b_t declar_variables:arr_vs SEMI
+               {: info.pushVarFields(b_t, arr_vs); :}
+             | var_declar DATA_TYPE:b_t declar_variables:arr_vs SEMI
+               {: info.pushVarFields(b_t, arr_vs); :}
+             ;
+             
+
+/* Rules for create and destroy */
+create  ::= /* empty */
+            {: info.generateMethodWithoutSwitch(RootBlock.CREATE); :}
+          | CREATE LBRACE body_cd RBRACE
+            {: info.generateMethodWithoutSwitch(RootBlock.CREATE); :}
+          ;
+destroy ::= /* empty */
+            {: info.generateMethodWithoutSwitch(RootBlock.DESTROY); :}
+          | DESTROY LBRACE body_cd RBRACE
+            {: info.generateMethodWithoutSwitch(RootBlock.DESTROY); :}
+          ;
+body_cd ::= /* empty */
+            {: /* nothing to do */ :}
+          | path
+            {: /* nothing to do */ :}
+          | point
+            {: /* nothing to do */ :}
+          | path point
+            {: /* nothing to do */ :}
+          | point path
+            {: /* nothing to do */ :}
+          ;
+path    ::= PATH LBRACE any_code:a_c RBRACE
+            {: info.registerBuildingBlock(BuildingBlock.PATH, a_c); :}
+          ;
+point   ::= POINT LBRACE any_code:a_c RBRACE
+            {: info.registerBuildingBlock(BuildingBlock.POINT, a_c); :}
+          ;
+          
+          
+/* Rules for join and destroy */
+join               ::= /* empty */
+                       {: info.generateMethodWithSwitch(RootBlock.JOIN); :}
+                     | JOIN LBRACE body_join RBRACE
+                       {: info.generateMethodWithSwitch(RootBlock.JOIN); :}
+                     ;
+split              ::= /* empty */
+                       {: info.generateMethodWithSwitch(RootBlock.SPLIT); :}
+                     | SPLIT LBRACE body_split RBRACE
+                       {: info.generateMethodWithSwitch(RootBlock.SPLIT); :}
+                     ;
+body_join          ::= child_types parent_types cluster_types
+                       {: /* nothing to do */ :}
+                     ;
+body_split         ::= parent_types child_types cluster_types
+                       {: /* nothing to do */ :}
+                     ;
+child_types        ::= /* empty */
+                       {: /* nothing to do */ :}
+                     | path_child
+                       {: /* nothing to do */ :}
+                     | point_child
+                       {: /* nothing to do */ :}
+                     | path_child point_child
+                       {: /* nothing to do */ :}
+                     | point_child path_child
+                       {: /* nothing to do */ :}
+                     ;
+parent_types       ::= /* empty */
+                       {: /* nothing to do */ :}
+                     | path_parent
+                       {: /* nothing to do */ :}
+                     | point_parent
+                       {: /* nothing to do */ :}
+                     | path_parent point_parent
+                       {: /* nothing to do */ :}
+                     | point_parent path_parent
+                       {: /* nothing to do */ :}
+                     ;
+path_child         ::= PATH_CHILD LBRACE any_code:a_c RBRACE
+                       {: info.registerBuildingBlock(BuildingBlock.PATH_CHILD, a_c); :}
+                     ;
+point_child        ::= POINT_CHILD LBRACE any_code:a_c RBRACE
+                       {: info.registerBuildingBlock(BuildingBlock.POINT_CHILD, a_c); :}
+                     ;
+path_parent        ::= PATH_PARENT LBRACE any_code:a_c RBRACE
+                       {: info.registerBuildingBlock(BuildingBlock.PATH_PARENT, a_c); :}
+                     ;
+point_parent       ::= POINT_PARENT LBRACE any_code:a_c RBRACE
+                       {: info.registerBuildingBlock(BuildingBlock.POINT_PARENT, a_c); :}
+                     ;
+cluster_types      ::= /* empty */
+                       {: /* nothing to do */ :}
+                     | cluster_types more_cluster_types:blocks LBRACE any_code:a_c RBRACE
+                       {: info.registerBuildingBlocks(blocks, a_c); :}
+                     ;
+more_cluster_types ::= one_cluster_type:c_type
+                       {: ArrayList<BuildingBlock> arr_list = new ArrayList<BuildingBlock>();
+                          arr_list.add(c_type);
+                          RESULT = arr_list; :}
+                     | more_cluster_types:arr_list COMMA one_cluster_type:c_type
+                       {: arr_list.add(c_type);
+                          RESULT = arr_list; :}
+                     ;
+one_cluster_type   ::= PATH_AND_PATH
+                       {: RESULT = BuildingBlock.PATH_AND_PATH; :}
+                     | PATH_AND_POINT
+                       {: RESULT = BuildingBlock.PATH_AND_POINT; :}
+                     | POINT_AND_PATH
+                       {: RESULT = BuildingBlock.POINT_AND_PATH; :}
+                     | POINT_AND_POINT
+                       {: RESULT = BuildingBlock.POINT_AND_POINT; :}
+                     | LPOINT_OVER_RPOINT
+                       {: RESULT = BuildingBlock.LPOINT_OVER_RPOINT; :}
+                     | RPOINT_OVER_LPOINT
+                       {: RESULT = BuildingBlock.RPOINT_OVER_LPOINT; :}
+                     | LPOINT_AND_RPOINT
+                       {: RESULT = BuildingBlock.LPOINT_AND_RPOINT; :}
+                     ;
+                     
+                     
+/* Rules for select */
+select      ::= /* empty */
+                {: info.generateMethodWithSwitch(RootBlock.SELECT); :}
+              | SELECT_QUESTION LBRACE any_code:ar_list1 body_select:ar_list2 RBRACE
+                {: info.registerBlocksForSelect(ar_list1, ar_list2);
+                   info.generateMethodWithSwitch(RootBlock.SELECT); :}
+              ;
+body_select ::= IF LPAREN expression:expr RPAREN LBRACE any_code:a_c1 SELECT A SEMI RBRACE 
+                ELSE LBRACE any_code:a_c2 SELECT B SEMI RBRACE
+                {: RESULT = info.connectSelectIf(expr, a_c1, a_c2); :}
+              ;
+          
+
+/* Rules for names of variables */
+variable ::= VARIABLE:v
+             {: RESULT = info.prepareExpressionFromVariable(v); :}
+           | vertex_short:v_s DOT VARIABLE:v
+             {: RESULT = info.prepareExpressionFromVariable(ClusterShort.C, v_s, v); :}
+           | cluster_short:cl_s DOT VARIABLE:v
+             {: RESULT = info.prepareExpressionFromVariable(cl_s, v); :}
+           | cluster_short:cl_s DOT VARIABLE:v LBRACKET vertex_short:v_s RBRACKET
+             {: RESULT = info.prepareExpressionFromVariable(cl_s, v, v_s); :}
+           | cluster_short:cl_s DOT vertex_short:v_s DOT VARIABLE:v
+             {: RESULT = info.prepareExpressionFromVariable(cl_s, v_s, v); :}
+           ;
+cluster_short ::= A                                          
+                  {: RESULT = ClusterShort.A; :}             
+                | B                                          
+                  {: RESULT = ClusterShort.B; :}             
+                | C                                          
+                  {: RESULT = ClusterShort.C; :}             
+                | CHILD                                      
+                  {: RESULT = ClusterShort.CHILD; :}         
+                ;                                            
+vertex_short  ::= LEFT                                       
+                  {: RESULT = VertexShort.LEFT; :}           
+                | RIGHT                                      
+                  {: RESULT = VertexShort.RIGHT; :}          
+                | BORDER                                       
+                  {: RESULT = VertexShort.BORDER; :}
+                | COMMON                                       
+                  {: RESULT = VertexShort.COMMON; :}           
+                ;                                            
+
+
+/* Rules for all kinds of operator terminals */
+assignment_operator ::= ASSIGN
+                        {: RESULT = AssignmentOperetor.ASSIGN; :}
+                      | PLUS_ASSIGN
+                        {: RESULT = AssignmentOperetor.PLUS_ASSIGN; :}
+                      | MINUS_ASSIGN
+                        {: RESULT = AssignmentOperetor.MINUS_ASSIGN; :}
+                      | TIMES_ASSIGN
+                        {: RESULT = AssignmentOperetor.TIMES_ASSIGN; :}
+                      | DIVIDE_ASSIGN
+                        {: RESULT = AssignmentOperetor.DIVIDE_ASSIGN; :}
+                      | AMPERSAND_ASSIGN
+                        {: RESULT = AssignmentOperetor.AMPERSAND_ASSIGN; :}
+                      ;
+comparison_operator ::= EQUAL
+                        {: RESULT = ComparisonOperetor.EQUAL; :}
+                      | NOT_EQUAL
+                        {: RESULT = ComparisonOperetor.NOT_EQUAL; :}
+                      | LESS
+                        {: RESULT = ComparisonOperetor.LESS; :}
+                      | GREATER
+                        {: RESULT = ComparisonOperetor.GREATER; :}
+                      | LESS_EQUAL
+                        {: RESULT = ComparisonOperetor.LESS_EQUAL; :}
+                      | GREATER_EQUAL
+                        {: RESULT = ComparisonOperetor.GREATER_EQUAL; :}
+                      ;
+boolean_operator    ::= AND
+                        {: RESULT = BooleanOperetor.AND; :}
+                      | OR
+                        {: RESULT = BooleanOperetor.OR; :}
+                      ;
+arithmetic_operator ::= PLUS
+                        {: RESULT = ArithmeticOperetor.PLUS; :}
+                      | MINUS
+                        {: RESULT = ArithmeticOperetor.MINUS; :}
+                      | TIMES
+                        {: RESULT = ArithmeticOperetor.TIMES; :}
+                      | DIVIDE
+                        {: RESULT = ArithmeticOperetor.DIVIDE; :}
+                      ;
+
+
+/* Rules for preparing numbers */
+
+
+/* Rules for any code */
+any_code   ::= /* empty */
+               {: RESULT = new ArrayList<String>(); :}
+             | any_code:ar_list1 assignment:ar_list2
+               {: ar_list1.addAll(ar_list2);
+                  RESULT = ar_list1; :}
+             | any_code:ar_list1 if:ar_list2
+               {: ar_list1.addAll(ar_list2);
+                  RESULT = ar_list1; :}
+             ;
+assignment ::= variable:expr1 assignment_operator:op expression:expr2 SEMI
+               {: RESULT = info.connectByAssignmentOperator(op, expr1, expr2); :}
+             ;
+expression ::= TRUE
+               {: RESULT = new TFLExpression(DataType.BOOLEAN, "true"); :}
+             | FALSE
+               {: RESULT = new TFLExpression(DataType.BOOLEAN, "false"); :}
+             | STRING_LITERAL:str
+               {: RESULT = new TFLExpression(DataType.STRING, str); :}
+             | IMINF:i_n
+               {: RESULT = new TFLExpression(DataType.INTEGER, "(new InfiniteInteger(" + i_n + "))"); :}
+             | IPINF:i_n
+               {: RESULT = new TFLExpression(DataType.INTEGER, "(new InfiniteInteger(" + i_n + "))"); :}
+             | I_NUMBER:i_n
+               {: RESULT = new TFLExpression(DataType.INTEGER, "(new InfiniteInteger(" + i_n + "))"); :}
+             | PLUS I_NUMBER:i_n
+               {: RESULT = new TFLExpression(DataType.INTEGER, "(new InfiniteInteger(" + i_n + "))"); :}
+               %prec UMINUS
+             | MINUS I_NUMBER:i_n
+               {: RESULT = new TFLExpression(DataType.INTEGER, "(new InfiniteInteger(-" + i_n + "))"); :}
+               %prec UMINUS
+             | RMINF:r_n
+               {: RESULT = new TFLExpression(DataType.REAL, "(new InfiniteReal(" + r_n + "))"); :}
+             | RPINF:r_n
+               {: RESULT = new TFLExpression(DataType.REAL, "(new InfiniteReal(" + r_n + "))"); :}
+             | R_NUMBER:r_n
+               {: RESULT = new TFLExpression(DataType.REAL, "(new InfiniteReal(" + r_n + "))"); :}
+             | PLUS R_NUMBER:r_n
+               {: RESULT = new TFLExpression(DataType.REAL, "(new InfiniteReal(" + r_n + "))"); :}
+               %prec UMINUS
+             | MINUS R_NUMBER:r_n
+               {: RESULT = new TFLExpression(DataType.REAL, "(new InfiniteReal(-" + r_n + "))"); :}
+               %prec UMINUS
+             | variable:expr
+               {: RESULT = expr; :}
+             | exists_function:expr
+               {: RESULT = expr; :}
+             | condition:expr
+               {: RESULT = expr; :}
+             | LPAREN condition:expr RPAREN
+               {: RESULT = info.enwrapExpressionByParenthesis(expr); :}
+             | expression:expr1 AMPERSAND expression:expr2
+               {: RESULT = info.connectStringExpressions(expr1, expr2); :}
+             | extrem_function:expr
+               {: RESULT = expr; :}
+             | arithmetic:expr
+               {: RESULT = expr; :}
+             | LPAREN arithmetic:expr RPAREN
+               {: RESULT = info.enwrapExpressionByParenthesis(expr); :}
+             ;               
+               
+exists_function ::= EXISTS LPAREN A DOT LEFT RPAREN
+                    {: RESULT = info.enwrapVertexByExistsFunction(ClusterShort.A); :}
+                  | EXISTS LPAREN B DOT LEFT RPAREN
+                    {: RESULT = info.enwrapVertexByExistsFunction(ClusterShort.B); :}
+                  ;
+
+condition ::= expression:expr1 boolean_operator:op expression:expr2
+              {: RESULT = info.connectByBooleanOperator(op, expr1, expr2); :}
+            | expression:expr1 comparison_operator:op expression:expr2
+              {: RESULT = info.connectByCopmarisonOperator(op, expr1, expr2); :}
+            ;
+
+extrem_function ::= MAX LPAREN extr_funct_arguments:expr RPAREN
+                    {: RESULT = info.enwrapExpressionByExtremFunction(expr, "maximum"); :}
+                  | MIN LPAREN extr_funct_arguments:expr RPAREN
+                    {: RESULT = info.enwrapExpressionByExtremFunction(expr, "minimum"); :}
+                  ;
+extr_funct_arguments ::= expression:expr
+                         {: info.checkNumericExpression(expr);
+                            RESULT = expr; :}
+                       | extr_funct_arguments:expr1 COMMA expression:expr2
+                         {: RESULT = info.connectNumericExpressionsByComma(expr1, expr2); :}
+                       ;
+arithmetic ::= expression:expr1 arithmetic_operator:op expression:expr2
+             {: RESULT = info.connectByArithmeticOperator(op, expr1, expr2); :}
+             ;
+
+
+/* Rules for if-elseif-else */
+if     ::= IF LPAREN expression:expr RPAREN LBRACE any_code:a_c RBRACE elseif:e_if else:e
+           {: RESULT = info.createIfBlock(expr, a_c, e_if, e); :}
+         ;
+elseif ::= /* empty */
+           {: RESULT = new ArrayList<String>(); :}
+         | elseif:e_if ELSEIF LPAREN expression:expr RPAREN LBRACE any_code:a_c RBRACE 
+           {: RESULT = info.createElseIfBlock(e_if, expr, a_c); :}
+         ;
+else   ::= /* empty */
+           {: RESULT = new ArrayList<String>(); :}
+         | ELSE LBRACE any_code:a_c RBRACE
+           {: RESULT = info.createElseBlock(a_c); :}
+         ;
+
+
+

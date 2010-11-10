@@ -1,0 +1,36 @@
+/******************************************************************************/
+/* Max edge on a way ********/
+
+
+/* Info *******************************/
+
+algorithm {maxEdgeOnWay}
+vertex { integer name; }
+cluster { integer max_weight, extra; }
+
+
+/* Algorithm description **************/
+
+join {
+  path_child {
+    child.max = child.max_weight;
+  }
+  point_child {
+    child.max = ImINF;
+  }
+  path_parent {
+    c.max_weight = MAX(a.max, b.max);
+  }
+  point_parent {
+    c.max_weight = ImINF;
+  }
+}
+
+split {
+  point_parent { c.ex = 0; }
+  path_parent  { c.ex = c.extra; }
+  path_child {
+    child.max_weight += c.ex;
+    child.extra      += c.ex;
+  }
+}

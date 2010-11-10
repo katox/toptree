@@ -1,0 +1,48 @@
+/******************************************************************************/
+/* Diameter of a tree *******/
+
+
+/* Info *******************************/
+
+algorithm {DiameterOfTree}
+vertex  { integer name; }
+cluster { integer length;
+          integer diam;
+          array(integer) max_dist; }
+
+
+/* Algorithm description **************/
+
+join {
+  path_child  { child.l = child.length; }
+  point_child { child.l = 0; }
+  path_parent {
+    c.length = a.l + b.l;
+    c.diam = MAX( a.diam, b.diam, a.max_dist[common] + b.max_dist[common] );
+  }
+  point_parent {
+    c.length = 0;
+    c.diam = MAX( a.diam, b.diam, a.max_dist[common] + b.max_dist[common] );
+  }
+  path_and_path {
+    c.max_dist[left]  = MAX( a.max_dist[left],  a.l + b.max_dist[common] );
+    c.max_dist[right] = MAX( b.max_dist[right], b.l + a.max_dist[common] );
+  }
+  path_and_point {
+    c.max_dist[left]  = MAX( a.max_dist[left],  a.l + b.max_dist[common] );
+    c.max_dist[right] = MAX( a.max_dist[common], b.max_dist[common] );
+  }
+  point_and_path {
+    c.max_dist[left]  = MAX( a.max_dist[common], b.max_dist[common] );
+    c.max_dist[right] = MAX( b.max_dist[right], b.l + a.max_dist[common] );
+  }
+  point_and_point, lpoint_and_rpoint {  /* common = border */
+    c.max_dist[border] = MAX( a.max_dist[common], b.max_dist[common] );
+  }
+  lpoint_over_rpoint {
+    c.max_dist[border] = MAX( a.max_dist[border], a.l + b.max_dist[common] );
+  }
+  rpoint_over_lpoint {
+    c.max_dist[border] = MAX( b.max_dist[border], b.l + a.max_dist[common] );
+  }
+}

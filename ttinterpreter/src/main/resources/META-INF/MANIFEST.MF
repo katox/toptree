@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Main-Class: org.fantomery.ttinterpreter.interpreter.TTInterpreter
+Class-Path: ./ lib/toptree-1.0-SNAPSHOT.jar lib/log4j-1.2.16.jar 
+ lib/jalopy-1.5rc3.jar lib/java-cup-0.11a.jar lib/tools.jar
+

@@ -1,0 +1,116 @@
+/******************************************************************************/
+/* Nearest marked vertex ****/
+
+
+/* Info *******************************/
+
+algorithm {nearestMarkedVertex}
+vertex {  integer name;
+          boolean marked; }
+cluster { integer length;
+          array(integer) mark_dist; }
+
+
+/* Algorithm description **************/
+
+create {
+  path {
+    c.mark_dist[left]  = IpINF;
+    c.mark_dist[right] = IpINF;
+  }
+  point {
+    c.mark_dist[left]  = IpINF;
+    if (left.marked) {
+      c.mark_dist[right] = c.length;
+    }
+    else {
+      c.mark_dist[right] = IpINF;
+    }
+  }
+}
+
+
+join {
+  path_child   { child.l = child.length; }
+  point_child  { child.l = 0; }
+  path_parent  { c.length = a.l + b.l; }
+  point_parent { c.length = 0; }
+  path_and_path {
+    if (common.marked) {
+      a.inclusive_mark_dist = 0;
+      b.inclusive_mark_dist = 0;
+    }
+    else {
+      a.inclusive_mark_dist = a.mark_dist[common];
+      b.inclusive_mark_dist = b.mark_dist[common];
+    }
+    c.mark_dist[left] =  MIN( a.mark_dist[left],  a.l + b.inclusive_mark_dist );
+    c.mark_dist[right] = MIN( b.mark_dist[right], b.l + a.inclusive_mark_dist );
+  }
+  path_and_point {
+    if ( EXISTS(b.left) && b.left.marked ) {
+      b.nearest_marked = MIN(b.length, b.mark_dist[common]);
+    } else {
+      b.nearest_marked = b.mark_dist[common]; }
+    c.mark_dist[left]  = MIN( a.mark_dist[left],   a.l + b.nearest_marked );
+    c.mark_dist[right] = MIN( a.mark_dist[common], b.nearest_marked );
+  }
+  point_and_path {
+    if ( EXISTS(a.left) && a.left.marked ) {
+      a.nearest_marked = MIN(a.length, a.mark_dist[common]);
+    } else {
+      a.nearest_marked = a.mark_dist[common]; }
+    c.mark_dist[left]  = MIN( b.mark_dist[common], a.nearest_marked );
+    c.mark_dist[right] = MIN( b.mark_dist[right],  b.l + a.nearest_marked );
+  }
+  point_and_point {
+    if ( EXISTS(a.left) && a.left.marked ) {
+      a.nearest_marked = MIN(a.length, a.mark_dist[common]);
+    } else {
+      a.nearest_marked = a.mark_dist[common]; }
+    if ( EXISTS(b.left) && b.left.marked ) {
+      b.nearest_marked = MIN(b.length, b.mark_dist[common]);
+    } else {
+      b.nearest_marked = b.mark_dist[common]; }
+    c.mark_dist[border] = MIN( a.nearest_marked, b.nearest_marked );
+  }
+  lpoint_over_rpoint {
+    if (common.marked) {
+      b.inclusive_mark_dist = 0;
+    } else {
+      b.inclusive_mark_dist = b.mark_dist[common]; }
+    if ( b.right.marked ) {
+      b.nearest_marked = MIN(b.l, b.mark_dist[common]);
+    } else {
+      b.nearest_marked = b.mark_dist[common]; }
+    c.mark_dist[border] = MIN(
+      a.mark_dist[left],
+      a.l + MIN( b.inclusive_mark_dist, b.nearest_marked )
+    );
+  }
+  rpoint_over_lpoint {
+    if (common.marked) {
+      a.inclusive_mark_dist = 0;
+    } else {
+      a.inclusive_mark_dist = a.mark_dist[common]; }
+    if ( a.left.marked ) {
+      a.nearest_marked = MIN(a.l, a.mark_dist[common]);
+    } else {
+      a.nearest_marked = a.mark_dist[common]; }
+    c.mark_dist[border] = MIN(
+      b.mark_dist[right],
+      b.l + MIN( a.inclusive_mark_dist, a.nearest_marked )
+    );
+  }
+  lpoint_and_rpoint {
+    if ( a.left.marked ) {
+      a.nearest_marked = MIN(a.l, a.mark_dist[common]);
+    } else {
+      a.nearest_marked = a.mark_dist[common]; }
+    if ( b.right.marked ) {
+      b.nearest_marked = MIN(b.l, b.mark_dist[common]);
+    } else {
+      b.nearest_marked = b.mark_dist[common]; }
+    c.mark_dist[border] = MIN( a.nearest_marked, b.nearest_marked );
+  }
+}

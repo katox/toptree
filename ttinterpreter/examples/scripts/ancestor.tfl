@@ -1,0 +1,33 @@
+/******************************************************************************/
+/* Level ancestor and common ancestor */
+
+
+/* Info *******************************/
+
+algorithm {ancestor}
+vertex  { integer name; }
+cluster { integer length; }
+
+
+/* Algorithm description **************/
+
+var {
+  integer level;
+}
+
+join {
+  path_child   { child.l = child.length; }
+  point_child  { child.l = 0; }
+  path_parent  { c.length = a.l + b.l; }
+  point_parent { c.length = 0; }
+}
+
+selectQuestion {
+  if (a.length >= level) {
+    select a;
+  }
+  else {
+    level = level - a.length;
+    select b;
+  }
+}

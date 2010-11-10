@@ -1,0 +1,269 @@
+/* This file defines grammar of Top Tree Guery Language TQL a describes
+   compilation from TQL to Java. */
+
+package ttlangs.tql;
+
+import java.util.ArrayList;
+
+import ttlangs.tql.TQLCommand;
+import ttlangs.tql.TQLError;
+import ttlangs.tql.TQLValue;
+import ttlangs.tql.TQLVariable;
+import ttlangs.tql.TQLValue.Key;
+import ttlangs.tql.TQLCommand.CommandType;
+import numbers.InfiniteInteger;
+import numbers.InfiniteReal;
+
+/* Parser code to change the way the parser reports errors (include
+   line and column number of the error). */
+parser code {:
+    
+    /* Change the method report_error so it will display the line and
+       column of where the error occurred in the input as well as the
+       reason for the error which is passed into the method in the
+       String 'message'. */
+    public void report_error(String message, Object info) {
+   
+        /* Create a StringBuffer called 'm' with the string 'Error' in it. */
+        StringBuffer m = new StringBuffer(message);
+   
+        /* Check if the information passed to the method is the same
+           type as the type java_cup.runtime.Symbol. */
+        if (info instanceof java_cup.runtime.Symbol) {
+            /* Declare a java_cup.runtime.Symbol object 's' with the
+               information in the object info that is being typecasted
+               as a java_cup.runtime.Symbol object. */
+            java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
+   
+            /* Check if the column number in the input is greater
+               or equal to zero. */
+            if (s.right >= 0)                    
+                /* Add to the end of the StringBuffer error message
+                   the column number of the error in the input. */
+                m.append(" at character "+(s.right+1));
+        }
+    
+        m.append(".");
+   
+        /* Print the contents of the StringBuffer 'm', which contains
+           an error message, out on a line. */
+        throw new TQLError(m.toString());
+    }
+
+    /* Change the method report_fatal_error so when it reports a fatal
+       error it will display the line and column number of where the
+       fatal error occurred in the input as well as the reason for the
+       fatal error which is passed into the method in the object
+       'message' and then exit.*/
+    public void report_fatal_error(String message, Object info) {
+        report_error(message, info);
+    }
+:};
+
+action code {:
+  /*TQLInfoClassesGenerator info = new TQLInfoClassesGenerator();*/
+:};
+
+
+terminal EXIT, LPAREN, RPAREN, LBRACKET, RBRACKET, LBRACE, RBRACE, SEMI, COMMA, ASSIGN;
+terminal InfiniteInteger IMINF, IPINF, I_NUMBER;
+terminal InfiniteReal RMINF, RPINF, R_NUMBER;
+terminal Boolean TRUE, FALSE;
+terminal NODE, EDGE, INFO;
+terminal L, R;
+terminal PLUS, MINUS;
+terminal LINK, CUT;
+terminal String VARIABLE, STRING_LITERAL;
+
+non terminal TQLCommand program, node_declaration, link_declaration, node, link, cut, function;
+non terminal TQLValue[] linked_nodes;
+non terminal TQLValue value;
+non terminal ArrayList<TQLValue> node_values, link_values, value_list;
+non terminal ArrayList<TQLVariable> variables, link_variables;
+non terminal TQLVariable link_variable;
+non terminal Key vertex_name;
+
+start with program;
+
+
+/* Start terminal */
+program ::= EXIT SEMI
+            {: RESULT = new TQLCommand(CommandType.EXIT); :}
+          | NODE SEMI
+            {: RESULT = new TQLCommand(CommandType.NODE_DECLAR_INFO); :}
+          | EDGE SEMI
+            {: RESULT = new TQLCommand(CommandType.LINK_DECLAR_INFO); :}
+          | INFO LPAREN value:val RPAREN SEMI
+            {: RESULT = new TQLCommand(CommandType.NODE_INFO, val, null); :}
+          | INFO LPAREN value:val1 COMMA value:val2 RPAREN SEMI
+            {: RESULT = new TQLCommand(CommandType.LINK_INFO, val1, val2); :}
+          | node:com SEMI
+            {: RESULT = com; :}
+          | link:com SEMI
+            {: RESULT = com; :}
+          | cut:com SEMI
+            {: RESULT = com; :}
+          | function:com SEMI
+            {: RESULT = com; :}
+          | node_declaration:com SEMI
+            {: RESULT = com; :}
+          | link_declaration:com SEMI
+            {: RESULT = com; :}
+          ;
+
+
+/* Rules for node */
+node_declaration ::= NODE LPAREN variables:vars RPAREN                     
+                     {: RESULT = new TQLCommand(CommandType.NODE_DECLARATION, vars, new ArrayList<TQLValue>()); :}
+                   | NODE LPAREN node_values:vals RPAREN
+                     {: RESULT = new TQLCommand(CommandType.NODE_DECLARATION, new ArrayList<TQLVariable>(), vals); :}
+                   | NODE LPAREN variables:vars RPAREN LPAREN node_values:vals RPAREN
+                     {: RESULT = new TQLCommand(CommandType.NODE_DECLARATION, vars, vals); :}
+                   | NODE LPAREN node_values:vals RPAREN LPAREN variables:vars RPAREN
+                     {: RESULT = new TQLCommand(CommandType.NODE_DECLARATION, vars, vals); :}
+                   ;
+variables        ::= VARIABLE:str
+                     {: ArrayList<TQLVariable> list_var = new ArrayList<TQLVariable>();
+                        list_var.add(new TQLVariable(str));
+                        RESULT = list_var; :}
+                   | variables:list_var COMMA VARIABLE:str 
+                     {: list_var.add(new TQLVariable(str));
+                        RESULT = list_var; :}
+                   ;
+node_values      ::= VARIABLE:str ASSIGN value:val
+                     {: ArrayList<TQLValue> list_val = new ArrayList<TQLValue>();
+                        val.setName(str);
+                        list_val.add(val);
+                        RESULT = list_val; :}
+                   | node_values:list_val COMMA VARIABLE:str ASSIGN value:val
+                     {: val.setName(str);
+                        list_val.add(val);
+                        RESULT = list_val; :}
+                   ;
+value            ::= I_NUMBER:val
+                     {: RESULT = new TQLValue(val); :}
+                   | PLUS I_NUMBER:val
+                     {: RESULT = new TQLValue(val); :}
+                   | MINUS I_NUMBER:val
+                     {: RESULT = new TQLValue(val.times(new InfiniteInteger(-1))); :}
+                   | R_NUMBER:val
+                     {: RESULT = new TQLValue(val); :}
+                   | PLUS R_NUMBER:val
+                     {: RESULT = new TQLValue(val); :}
+                   | MINUS R_NUMBER:val
+                     {: RESULT = new TQLValue(val.times(new InfiniteReal(-1.0))); :}
+                   | IMINF:val
+                     {: RESULT = new TQLValue(val); :}
+                   | IPINF:val
+                     {: RESULT = new TQLValue(val); :}
+                   | RMINF:val
+                     {: RESULT = new TQLValue(val); :}
+                   | RPINF:val
+                     {: RESULT = new TQLValue(val); :}
+                   | STRING_LITERAL:val
+                     {: RESULT = new TQLValue(val); :}
+                   | TRUE:val
+                     {: RESULT = new TQLValue(val); :}
+                   | FALSE:val
+                     {: RESULT = new TQLValue(val); :}
+                   ;
+
+
+/* Rules for link */
+link_declaration ::= EDGE LPAREN link_variables:vars RPAREN                    
+                     {: RESULT = new TQLCommand(CommandType.LINK_DECLARATION, vars, new ArrayList<TQLValue>()); :}                                  
+                   | EDGE LPAREN link_values:vals RPAREN
+                     {: RESULT = new TQLCommand(CommandType.LINK_DECLARATION, new ArrayList<TQLVariable>(), vals); :}                                  
+                   | EDGE LPAREN link_variables:vars RPAREN LPAREN link_values:vals RPAREN
+                     {: RESULT = new TQLCommand(CommandType.LINK_DECLARATION, vars, vals); :}                                  
+                   | EDGE LPAREN link_values:vals RPAREN LPAREN link_variables:vars RPAREN
+                     {: RESULT = new TQLCommand(CommandType.LINK_DECLARATION, vars, vals); :}                                  
+                   ;
+link_variables   ::= link_variable:var
+                     {: ArrayList<TQLVariable> list_var = new ArrayList<TQLVariable>();
+                        list_var.add(var);
+                        RESULT = list_var; :}
+                   | link_variables:list_var COMMA link_variable:var
+                     {: list_var.add(var);
+                        RESULT = list_var; :}
+                   ;
+link_variable    ::= VARIABLE:var
+                    {: RESULT = new TQLVariable(var); :}                                  
+                  | VARIABLE:var vertex_name:key
+                    {: RESULT = new TQLVariable(var, key); :}
+                  ;                                
+link_values      ::= link_variable:var ASSIGN value:val
+                     {: ArrayList<TQLValue> list_val = new ArrayList<TQLValue>();
+                        val.setName(var.getName());
+                        if (var.isArray()) val.setKey(var.getKey());
+                        list_val.add(val);
+                        RESULT = list_val; :}
+                   | link_values:list_val COMMA link_variable:var ASSIGN value:val
+                     {: val.setName(var.getName());
+                        if (var.isArray()) val.setKey(var.getKey());
+                        list_val.add(val);
+                        RESULT = list_val; :}
+                   ;
+vertex_name      ::= LBRACKET L RBRACKET
+                     {: RESULT = Key.L; :}
+                   | LBRACKET R RBRACKET
+                     {: RESULT = Key.R; :}
+                   ;
+
+                
+/* Rules for manipulating with nodes */
+node       ::= value:val LPAREN value_list:values RPAREN
+               {: RESULT = new TQLCommand(CommandType.NODE, val, values, null); :}
+             | value:val LPAREN node_values:init_values RPAREN
+               {: RESULT = new TQLCommand(CommandType.NODE, val, null,   init_values); :}
+             | value:val LPAREN value_list:values RPAREN LPAREN node_values:init_values RPAREN
+               {: RESULT = new TQLCommand(CommandType.NODE, val, values, init_values); :}
+             | value:val LPAREN node_values:init_values RPAREN LPAREN value_list:values RPAREN
+               {: RESULT = new TQLCommand(CommandType.NODE, val, values, init_values); :}
+             ;
+value_list ::= value:val
+               {: ArrayList<TQLValue> list_val = new ArrayList<TQLValue>();
+                  list_val.add(val);
+                  RESULT = list_val; :}
+             | value_list:list_val COMMA value:val
+               {: list_val.add(val);
+                  RESULT = list_val; :}
+             ;
+        
+/* Rules for linking nodes into edges */
+link ::= linked_nodes:nodes
+         {: RESULT = new TQLCommand(CommandType.LINK, nodes, null,   null); :}
+       | linked_nodes:nodes LPAREN value_list:values RPAREN
+         {: RESULT = new TQLCommand(CommandType.LINK, nodes, values, null); :}
+       | linked_nodes:nodes LPAREN link_values:init_values RPAREN
+         {: RESULT = new TQLCommand(CommandType.LINK, nodes, null,   init_values); :}
+       | linked_nodes:nodes LPAREN value_list:values RPAREN LPAREN link_values:init_values RPAREN
+         {: RESULT = new TQLCommand(CommandType.LINK, nodes, values, init_values); :}
+       | linked_nodes:nodes LPAREN link_values:init_values RPAREN LPAREN value_list:values RPAREN
+         {: RESULT = new TQLCommand(CommandType.LINK, nodes, values, init_values); :}
+       ;
+linked_nodes ::= value:val1 LINK value:val2
+                 {: TQLValue[] arr_vals = { val1, val2, null, null };
+                    RESULT = arr_vals; :}
+               | value:val1 LBRACE value:val3 RBRACE LINK value:val2
+                 {: TQLValue[] arr_vals = { val1, val2, val3, null };
+                    RESULT = arr_vals; :}
+               | value:val1 LINK value:val2 LBRACE value:val4 RBRACE
+                 {: TQLValue[] arr_vals = { val1, val2, null, val4 };
+                    RESULT = arr_vals; :}
+               | value:val1 LBRACE value:val3 RBRACE LINK value:val2 LBRACE value:val4 RBRACE
+                 {: TQLValue[] arr_vals = { val1, val2, val3, val4 };
+                    RESULT = arr_vals; :}
+               ;               
+                        
+/* A rule for cutting edges */
+cut ::= value:val1 CUT value:val2
+        {: RESULT = new TQLCommand(CommandType.CUT, val1, val2); :}
+      ;
+
+/* A rule for using prepared functions */
+function ::= VARIABLE:var LPAREN RPAREN
+             {: RESULT = new TQLCommand(CommandType.FUNCTION, var, null); :}
+           | VARIABLE:var LPAREN value_list:list_val RPAREN
+             {: RESULT = new TQLCommand(CommandType.FUNCTION, var, list_val); :}
+           ;

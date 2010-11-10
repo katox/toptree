@@ -1,0 +1,68 @@
+/******************************************************************************/
+/* Dynamic median of tree ***/
+
+
+/* Info *******************************/
+
+algorithm {dynamicMedianOfTree}
+vertex {  integer name;
+          integer weight; }
+cluster { integer length;
+          integer sum; }
+
+
+/* Algorithm description **************/
+
+create {
+  path  { c.sum = 0; }
+  point { c.sum = left.weight; }
+}
+
+join {
+  path_child   { child.l = child.length; }
+  point_child  { child.l = 0; }
+  path_parent  { 
+    c.length = a.l + b.l;
+  }
+  point_parent {
+    c.length = 0;
+  }
+  path_and_path {
+    c.sum = a.sum + b.sum + common.weight;
+  }
+  path_and_point {
+    c.sum = a.sum + b.sum;
+    if (EXISTS(b.left)) { c.sum += b.left.weight; }
+  }
+  point_and_path {
+    c.sum = a.sum + b.sum;
+    if (EXISTS(a.left)) { c.sum += a.left.weight; }
+  }
+  point_and_point {
+    c.sum = a.sum + b.sum;
+    if (EXISTS(a.left)) { c.sum += a.left.weight; }
+    if (EXISTS(b.left)) { c.sum += b.left.weight; }
+  }
+  lpoint_over_rpoint {
+    c.sum = a.sum + b.sum + a.right.weight + b.right.weight;
+  }
+  rpoint_over_lpoint {
+    c.sum = a.sum + b.sum + a.left.weight + b.left.weight;  
+  }
+  lpoint_and_rpoint {
+    c.sum = a.sum + b.sum + a.left.weight + b.right.weight;
+  }
+}
+
+selectQuestion {
+  a.w = a.sum + a.right.weight;
+  if (EXISTS(a.left)) { a.w += a.left.weight; } 
+  b.w = b.sum + b.right.weight;
+  if (EXISTS(b.left)) { b.w += b.left.weight; } 
+  if (a.w >= b.w) {
+    select a;
+  }
+  else {
+    select b;
+  }
+}

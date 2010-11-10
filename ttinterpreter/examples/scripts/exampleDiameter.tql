@@ -1,0 +1,18 @@
+edge(length = 1, diam = 1, max_dist[L] = 1, max_dist[R] = 1);
+1 -- 2;
+info(1);
+2 -- 3;
+info(2,3);
+4 -- 2 {3};
+getClusterVal1(4,"diam",false);
+getClusterVal1(4,"max_dist",true);
+edge(length, diam, max_dist[L], max_dist[R]);
+5 -- 6 (10, 10, 10, 10);
+6 -- 7 (1, 1, 1, 1);
+getClusterVal2(5,7,"length");
+5 ## 6;
+getClusterVal2(5,7,"length");
+5 -- 6 (10, 10, 10, 10);
+2{1} -- 6{7} (1, 1, 1, 1);
+getClusterVal1(1,"diam",false);
+exit;

@@ -1,0 +1,27 @@
+/******************************************************************************/
+/*** Length of a way ********/
+
+
+/* Info *******************************/
+
+algorithm {lengthOfWay}
+vertex { integer name; } /* supported type: integer, real, string, boolean */
+cluster { integer length; }
+
+
+/* Algorithm description **************/
+
+join {
+  path_child {
+    child.l = child.length;
+  }
+  point_child {
+    child.l = 0;   /* ImINF = minus infinity */
+  }
+  path_parent {
+    c.length = a.l + b.l;   /* always: c = parent (or current node), a=left son, b = right son */
+  }
+  point_parent {
+    c.length = 0;
+  }
+}
