@@ -4,7 +4,7 @@
 
   <groupId>org.fantomery</groupId>
   <artifactId>ttinterpreter</artifactId>
-  <version>1.0</version>
+  <version>1.1-SNAPSHOT</version>
   <packaging>jar</packaging>
   <name>ttinterpreter</name>
   <build>
@@ -54,7 +54,7 @@
     <dependency>
 	<groupId>org.fantomery</groupId>
 	<artifactId>toptree</artifactId>
-	<version>1.0</version>
+	<version>1.1-SNAPSHOT</version>
     </dependency>
     <dependency>
 	<groupId>log4j</groupId>
