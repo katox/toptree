@@ -412,7 +412,7 @@ public class TTInterpreter {
 			interpreter = Launcher.createInterpreter(
 					vertex_package, cluster_package, functions, TOPTREE_PACKAGE);
 
-	        System.out.print("\nInsert a name of an unique node field name: ");
+	        System.out.print("\nEnter the unique vertex field name (eg. `name`): ");
             while (true) {
             	String input = in.readLine();
     	        if (input == null || input.matches(EXIT)) {

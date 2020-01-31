@@ -1,3 +1,3 @@
 #!/bin/sh
 
-java -jar ttinterpreter-*.jar $@
+java -jar ttinterpreter.jar $@
